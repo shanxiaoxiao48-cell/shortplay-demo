@@ -363,7 +363,7 @@ function addReferenceImage(imageSrc, type, name) {
   deleteBtn.className = 'ref-image-delete'; deleteBtn.innerHTML = '✕';
   deleteBtn.addEventListener('click', function(e) {
     e.stopPropagation();
-    const i = state.referenceImages.findIndex(r => r.src === imageSrc);
+    const i = state.referenceImages.findIndex(r => r.src === imageSrc && r.name === name);
     if (i > -1) state.referenceImages.splice(i, 1);
     imageItem.remove();
     if (state.referenceImages.length === 0) referenceStack.classList.remove('has-images');
@@ -374,13 +374,77 @@ function addReferenceImage(imageSrc, type, name) {
   imageItem.addEventListener('click', function(e) {
     if (e.target.closest('.ref-image-delete')) return;
     if (type === 'video') {
-      showVideoFrameModal(imageSrc);
+      const refIndex = state.referenceImages.findIndex(r => r.src === imageSrc && r.name === name);
+      showVideoFrameModal(imageSrc, name, refIndex);
     }
   });
   const refAddBox = document.getElementById('refAddBox');
   referenceStack.insertBefore(imageItem, refAddBox);
   state.referenceImages.push({ src: imageSrc, type, name });
   referenceStack.classList.add('has-images');
+  repositionRefAddBtn();
+  updatePromptPlaceholder();
+}
+
+function rebuildReferenceStack() {
+  const referenceStack = document.getElementById('referenceStack');
+  if (!referenceStack) return;
+  
+  // 清除所有现有的参考图（保留添加按钮）
+  const refAddBox = document.getElementById('refAddBox');
+  const existingItems = referenceStack.querySelectorAll('.ref-image-item');
+  existingItems.forEach(item => item.remove());
+  
+  // 重新添加所有参考图
+  const angles = [-8, 6, -4, 10, -6];
+  state.referenceImages.forEach((ref, index) => {
+    const imageItem = document.createElement('div');
+    imageItem.className = 'ref-image-item';
+    imageItem.style.left = '0px';
+    imageItem.style.top = '0px';
+    imageItem.style.transform = `rotate(${angles[index % angles.length]}deg)`;
+    imageItem.style.zIndex = index + 1;
+    
+    const img = document.createElement('img');
+    img.src = ref.src;
+    imageItem.appendChild(img);
+    
+    if (ref.type === 'video') {
+      const badge = document.createElement('div');
+      badge.className = 'ref-type-badge';
+      badge.innerHTML = '<svg width="10" height="10" viewBox="0 0 24 24" fill="white" stroke="none"><polygon points="5 3 19 12 5 21 5 3"/></svg>';
+      imageItem.appendChild(badge);
+    }
+    
+    const deleteBtn = document.createElement('button');
+    deleteBtn.className = 'ref-image-delete';
+    deleteBtn.innerHTML = '✕';
+    deleteBtn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      state.referenceImages.splice(index, 1);
+      rebuildReferenceStack();
+      if (state.referenceImages.length === 0) referenceStack.classList.remove('has-images');
+      repositionRefAddBtn();
+      updatePromptPlaceholder();
+    });
+    imageItem.appendChild(deleteBtn);
+    
+    imageItem.addEventListener('click', function(e) {
+      if (e.target.closest('.ref-image-delete')) return;
+      if (ref.type === 'video') {
+        showVideoFrameModal(ref.src, ref.name, index);
+      }
+    });
+    
+    referenceStack.insertBefore(imageItem, refAddBox);
+  });
+  
+  if (state.referenceImages.length > 0) {
+    referenceStack.classList.add('has-images');
+  } else {
+    referenceStack.classList.remove('has-images');
+  }
+  
   repositionRefAddBtn();
   updatePromptPlaceholder();
 }
@@ -1085,7 +1149,7 @@ function showCropModal() {
   initCropDrag(modal, shotDur);
 }
 
-function showVideoFrameModal(videoSrc, refName) {
+function showVideoFrameModal(videoSrc, refName, replaceIndex) {
   const modal = document.createElement('div');
   modal.className = 'modal-overlay';
   const previewSrc = videoSrc || 'https://images.unsplash.com/photo-1517457373958-b7bdd4587205?w=400&h=300&fit=crop';
@@ -1121,13 +1185,27 @@ function showVideoFrameModal(videoSrc, refName) {
     applyBtn.addEventListener('click', () => {
       const { rs, re, pp, fmtTime, totalSec } = cropState;
       let name;
+      let newType;
+      
       if (currentMode === 'frame') {
         const frameNum = Math.round(pp * totalSec * 30);
         name = `${refName}-${frameNum}帧`;
+        newType = 'image'; // 选帧应用 = 图片素材
       } else {
         name = `${refName}-${fmtTime(rs * totalSec)}-${fmtTime(re * totalSec)}`;
+        newType = 'video'; // 选片段应用 = 视频素材
       }
-      addReferenceImage(previewSrc, 'image', name);
+      
+      // 如果是替换模式，替换原有素材
+      if (replaceIndex !== undefined && replaceIndex >= 0) {
+        state.referenceImages[replaceIndex] = { src: previewSrc, type: newType, name };
+        // 重新构建参考图堆叠区
+        rebuildReferenceStack();
+      } else {
+        // 否则添加新素材
+        addReferenceImage(previewSrc, newType, name);
+      }
+      
       modal.remove();
     });
   }
