@@ -1161,7 +1161,7 @@ function showCropModal() {
   const initialState = shot ? {
     rs: shot.cropStart !== undefined ? shot.cropStart : 0,
     re: shot.cropEnd !== undefined ? shot.cropEnd : 1,
-    pp: 0
+    pp: shot.cropStart !== undefined ? shot.cropStart : 0  // 播放头初始位置在范围框起始位置
   } : null;
   
   initCropDrag(modal, shotDur, false, initialState);
@@ -1202,13 +1202,15 @@ function showVideoFrameModal(videoSrc, refName, replaceIndex) {
       currentMode = this.getAttribute('data-mode');
     });
   });
-  const shotDur = SHOT_DATA[state.currentShot - 1]?.duration || 5;
+  const shot = SHOT_DATA[state.currentShot - 1];
+  // 使用原始时长，如果没有则使用当前时长
+  const shotDur = shot?.originalDuration || shot?.duration || 5;
   
   // 传递现有的片段信息以恢复状态
   const initialState = existingRef ? {
     rs: existingRef.segmentStart || 0,
     re: existingRef.segmentEnd || 1,
-    pp: existingRef.framePosition || 0
+    pp: existingRef.segmentStart || 0  // 播放头初始位置在范围框起始位置
   } : null;
   
   const cropState = initCropDrag(modal, shotDur, true, initialState); // 传递 true 表示不修改分镜数据，传递初始状态
@@ -1226,7 +1228,8 @@ function showVideoFrameModal(videoSrc, refName, replaceIndex) {
         name = `${refName}-${frameNum}帧`;
         newType = 'image'; // 选帧应用 = 图片素材
       } else {
-        name = `${refName}-${fmtTime(rs * totalSec)}-${fmtTime(re * totalSec)}`;
+        const segmentDuration = (re - rs) * totalSec;
+        name = `${refName}-${segmentDuration.toFixed(2)}秒`;
         newType = 'video'; // 选片段应用 = 视频素材
       }
       
