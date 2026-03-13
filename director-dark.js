@@ -1692,10 +1692,11 @@ function buildTimelineShots() {
   state.totalTime = totalDuration;
   const totalTimeEl = document.querySelector('.total-time');
   if (totalTimeEl) {
-    const h = Math.floor(totalDuration / 3600);
-    const m = Math.floor((totalDuration % 3600) / 60);
-    const s = totalDuration % 60;
-    totalTimeEl.textContent = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+    const totalMs = totalDuration * 1000; // 转换为毫秒
+    const m = Math.floor(totalMs / 60000); // 分钟
+    const s = Math.floor((totalMs % 60000) / 1000); // 秒
+    const ms = Math.floor((totalMs % 1000) / 10); // 毫秒（两位数）
+    totalTimeEl.textContent = `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}:${String(ms).padStart(2,'0')}`;
   }
   // Add trigger before first shot
   const trigBefore = document.createElement('div');
@@ -1877,10 +1878,11 @@ function stopPlayback() { if (playbackInterval) { cancelAnimationFrame(playbackI
 function updateTimeDisplay() {
   const el = document.getElementById('currentTimeDisplay');
   if (el) { 
-    const h = Math.floor(state.currentTime / 3600);
-    const m = Math.floor((state.currentTime % 3600) / 60);
-    const s = state.currentTime % 60;
-    el.textContent = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+    const totalMs = state.currentTime * 1000; // 转换为毫秒
+    const m = Math.floor(totalMs / 60000); // 分钟
+    const s = Math.floor((totalMs % 60000) / 1000); // 秒
+    const ms = Math.floor((totalMs % 1000) / 10); // 毫秒（两位数）
+    el.textContent = `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}:${String(ms).padStart(2,'0')}`;
   }
 }
 
