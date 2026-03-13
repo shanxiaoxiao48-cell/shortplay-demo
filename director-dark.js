@@ -1206,6 +1206,11 @@ function showVideoFrameModal(videoSrc, refName, replaceIndex) {
     refName = ref ? ref.name : `分镜${state.currentShot}-视频1`;
   }
   
+  // 提取基础名称（去掉时长或帧数后缀）
+  // 例如："分镜1-视频1-1.93秒" -> "分镜1-视频1"
+  // 例如："分镜1-视频1-120帧" -> "分镜1-视频1"
+  const baseRefName = refName.replace(/-[\d.]+秒$/, '').replace(/-\d+帧$/, '');
+  
   let currentMode = existingRef ? (existingRef.type === 'video' ? 'segment' : 'frame') : 'frame';
   modal.innerHTML = `<div class="modal-content crop-modal"><div class="modal-header"><h3>视频素材选取</h3><button class="modal-close-btn" id="vfCloseBtn"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>
     <div class="modal-body">
@@ -1262,11 +1267,11 @@ function showVideoFrameModal(videoSrc, refName, replaceIndex) {
       
       if (currentMode === 'frame') {
         const frameNum = Math.round(pp * totalSec * 30);
-        name = `${refName}-${frameNum}帧`;
+        name = `${baseRefName}-${frameNum}帧`;
         newType = 'image'; // 选帧应用 = 图片素材
       } else {
         const segmentDuration = (re - rs) * totalSec;
-        name = `${refName}-${segmentDuration.toFixed(2)}秒`;
+        name = `${baseRefName}-${segmentDuration.toFixed(2)}秒`;
         newType = 'video'; // 选片段应用 = 视频素材
       }
       
@@ -1687,8 +1692,10 @@ function buildTimelineShots() {
   state.totalTime = totalDuration;
   const totalTimeEl = document.querySelector('.total-time');
   if (totalTimeEl) {
-    const m = Math.floor(totalDuration / 60), s = totalDuration % 60;
-    totalTimeEl.textContent = `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+    const h = Math.floor(totalDuration / 3600);
+    const m = Math.floor((totalDuration % 3600) / 60);
+    const s = totalDuration % 60;
+    totalTimeEl.textContent = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
   }
   // Add trigger before first shot
   const trigBefore = document.createElement('div');
@@ -1869,7 +1876,12 @@ function stopPlayback() { if (playbackInterval) { cancelAnimationFrame(playbackI
 
 function updateTimeDisplay() {
   const el = document.getElementById('currentTimeDisplay');
-  if (el) { const m = Math.floor(state.currentTime/60), s = state.currentTime%60; el.textContent = `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`; }
+  if (el) { 
+    const h = Math.floor(state.currentTime / 3600);
+    const m = Math.floor((state.currentTime % 3600) / 60);
+    const s = state.currentTime % 60;
+    el.textContent = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+  }
 }
 
 function initTimelineShots() {
