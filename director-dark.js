@@ -1152,8 +1152,19 @@ function showCropModal() {
   document.body.appendChild(modal); injectModalStyles();
   modal.querySelector('#cropCloseBtn').addEventListener('click', () => modal.remove());
   modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
-  const shotDur = SHOT_DATA[state.currentShot - 1]?.duration || 5;
-  initCropDrag(modal, shotDur);
+  
+  const shotIdx = state.currentShot - 1;
+  const shot = SHOT_DATA[shotIdx];
+  const shotDur = shot?.originalDuration || shot?.duration || 5;
+  
+  // 恢复之前的剪裁范围
+  const initialState = shot ? {
+    rs: shot.cropStart !== undefined ? shot.cropStart : 0,
+    re: shot.cropEnd !== undefined ? shot.cropEnd : 1,
+    pp: 0
+  } : null;
+  
+  initCropDrag(modal, shotDur, false, initialState);
 }
 
 function showVideoFrameModal(videoSrc, refName, replaceIndex) {
@@ -1339,9 +1350,17 @@ function initCropDrag(modal, totalSec, skipShotUpdate, initialState) {
     applyBtn.addEventListener('click', () => {
       stopPlay();
       const croppedDuration = (re - rs) * totalSec;
-      // Save cropped duration to current shot
+      // Save cropped duration and crop info to current shot
       const shotIdx = state.currentShot - 1;
       if (SHOT_DATA[shotIdx]) {
+        // 保存原始时长（如果还没保存过）
+        if (SHOT_DATA[shotIdx].originalDuration === undefined) {
+          SHOT_DATA[shotIdx].originalDuration = SHOT_DATA[shotIdx].duration;
+        }
+        // 保存剪裁信息
+        SHOT_DATA[shotIdx].cropStart = rs;
+        SHOT_DATA[shotIdx].cropEnd = re;
+        // 更新显示的时长
         SHOT_DATA[shotIdx].duration = Math.round(croppedDuration * 100) / 100;
         // Rebuild timeline to reflect new duration
         if (state.currentView === 'timeline') {
