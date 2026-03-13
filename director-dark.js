@@ -634,19 +634,23 @@ function handleGenerate() {
   addGeneratingPlaceholder();
   
   setTimeout(() => {
-    btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg> 成功`;
-    btn.style.background = '#52c41a';
-    showToast(`${type}成功！`);
-    
     // 生成完成，替换占位图为真实结果
     addGenerationResult();
+    
+    // 显示成功提示
+    showToast(`${type}成功！`);
+    
+    // 立即恢复按钮状态，不显示"成功"
+    btn.innerHTML = originalHTML;
+    btn.style.background = '';
+    btn.style.opacity = '';
+    btn.disabled = false;
     
     // Clear prompt input after successful generation
     const promptInput = document.getElementById('promptInput');
     if (promptInput) promptInput.textContent = '';
     // Clear reference images
     clearReferenceImages();
-    setTimeout(() => { btn.innerHTML = originalHTML; btn.style.background = ''; btn.style.opacity = ''; btn.disabled = false; }, 2000);
   }, 3000);
 }
 
@@ -661,12 +665,12 @@ function addGenerationResult() {
   const newSrc = newImgs[state.generationCount % newImgs.length];
   const shotIdx = state.currentShot - 1;
   const shot = SHOT_DATA[shotIdx];
+  const genType = document.getElementById('generationType')?.value === '图片生成' ? 'image' : 'video';
+  const promptText = document.getElementById('promptInput')?.textContent?.trim() || '';
 
   // Save to shot data
   if (shot) {
     if (!shot.history) shot.history = [];
-    const genType = document.getElementById('generationType')?.value === '图片生成' ? 'image' : 'video';
-    const promptText = document.getElementById('promptInput')?.textContent?.trim() || '';
     shot.history.unshift({ src: newSrc, type: genType, prompt: promptText });
     // Update shot image (use latest generation)
     shot.img = newSrc.replace('300&h=400', '200&h=120');
@@ -686,9 +690,7 @@ function addGenerationResult() {
   const historySection = document.querySelector('.history-section');
   const placeholderCard = historySection?.querySelector('.history-card.generating');
   if (placeholderCard) {
-    const promptText = document.getElementById('promptInput')?.textContent?.substring(0, 80) || '';
-    const genType = document.getElementById('generationType')?.value === '图片生成' ? 'image' : 'video';
-    const card = createHistoryCard(newSrc, promptText, genType);
+    const card = createHistoryCard(newSrc, promptText.substring(0, 80), genType);
     placeholderCard.replaceWith(card);
     
     // 确保滚动到最下方显示新卡片
@@ -703,7 +705,6 @@ function addGenerationResult() {
   const previewHistory = document.querySelector('.preview-history');
   const placeholderItem = previewHistory?.querySelector('.preview-history-item.generating');
   if (placeholderItem) {
-    const genType = document.getElementById('generationType')?.value === '图片生成' ? 'image' : 'video';
     const item = createPreviewHistoryItem(newSrc, genType);
     placeholderItem.replaceWith(item);
     selectPreviewHistory(item, newSrc);
