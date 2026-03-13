@@ -1177,7 +1177,7 @@ function showVideoFrameModal(videoSrc, refName, replaceIndex) {
     });
   });
   const shotDur = SHOT_DATA[state.currentShot - 1]?.duration || 5;
-  const cropState = initCropDrag(modal, shotDur);
+  const cropState = initCropDrag(modal, shotDur, true); // 传递 true 表示不修改分镜数据
   // Override apply button for video frame modal
   const applyBtn = modal.querySelector('#cropApplyBtn');
   if (applyBtn) {
@@ -1211,7 +1211,7 @@ function showVideoFrameModal(videoSrc, refName, replaceIndex) {
   }
 }
 
-function initCropDrag(modal, totalSec) {
+function initCropDrag(modal, totalSec, skipShotUpdate) {
   totalSec = totalSec || 5;
   const track = modal.querySelector('#cropTrack'), range = modal.querySelector('#cropRange');
   const handleStart = modal.querySelector('#cropHandleStart'), handleEnd = modal.querySelector('#cropHandleEnd');
@@ -1300,7 +1300,7 @@ function initCropDrag(modal, totalSec) {
     resetBtn.addEventListener('mouseleave', function() { this.style.color=''; });
     resetBtn.addEventListener('click', () => { stopPlay(); rs=0; re=1; pp=0; update(); });
   }
-  if (applyBtn) {
+  if (applyBtn && !skipShotUpdate) {
     applyBtn.addEventListener('click', () => {
       stopPlay();
       const croppedDuration = (re - rs) * totalSec;
