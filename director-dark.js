@@ -333,7 +333,7 @@ function initReferenceUpload() {
   });
 }
 
-function addReferenceImage(imageSrc, type, name) {
+function addReferenceImage(imageSrc, type, name, segmentStart, segmentEnd, framePosition) {
   type = type || 'image';
   if (!name) {
     // Auto-generate name based on current shot and type
@@ -380,7 +380,14 @@ function addReferenceImage(imageSrc, type, name) {
   });
   const refAddBox = document.getElementById('refAddBox');
   referenceStack.insertBefore(imageItem, refAddBox);
-  state.referenceImages.push({ src: imageSrc, type, name });
+  state.referenceImages.push({ 
+    src: imageSrc, 
+    type, 
+    name,
+    segmentStart: segmentStart || 0,
+    segmentEnd: segmentEnd || 1,
+    framePosition: framePosition || 0
+  });
   referenceStack.classList.add('has-images');
   repositionRefAddBtn();
   updatePromptPlaceholder();
@@ -1153,15 +1160,23 @@ function showVideoFrameModal(videoSrc, refName, replaceIndex) {
   const modal = document.createElement('div');
   modal.className = 'modal-overlay';
   const previewSrc = videoSrc || 'https://images.unsplash.com/photo-1517457373958-b7bdd4587205?w=400&h=300&fit=crop';
+  
+  // 获取现有参考图的信息（如果是替换模式）
+  let existingRef = null;
+  if (replaceIndex !== undefined && replaceIndex >= 0) {
+    existingRef = state.referenceImages[replaceIndex];
+  }
+  
   // Determine the source name from existing reference images
   if (!refName) {
     const ref = state.referenceImages.find(r => r.src === videoSrc);
     refName = ref ? ref.name : `分镜${state.currentShot}-视频1`;
   }
-  let currentMode = 'frame';
+  
+  let currentMode = existingRef ? (existingRef.type === 'video' ? 'segment' : 'frame') : 'frame';
   modal.innerHTML = `<div class="modal-content crop-modal"><div class="modal-header"><h3>视频素材选取</h3><button class="modal-close-btn" id="vfCloseBtn"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>
     <div class="modal-body">
-      <div style="display:flex;gap:8px;margin-bottom:12px;"><button class="crop-btn vf-mode-btn active" data-mode="frame" style="flex:1;padding:8px;background:var(--primary);border:1px solid var(--primary);border-radius:var(--radius-sm);color:white;font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:4px;">选帧</button><button class="crop-btn vf-mode-btn" data-mode="segment" style="flex:1;padding:8px;background:var(--bg-secondary);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text-primary);font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:4px;">选片段</button></div>
+      <div style="display:flex;gap:8px;margin-bottom:12px;"><button class="crop-btn vf-mode-btn ${currentMode === 'frame' ? 'active' : ''}" data-mode="frame" style="flex:1;padding:8px;background:${currentMode === 'frame' ? 'var(--primary)' : 'var(--bg-secondary)'};border:1px solid ${currentMode === 'frame' ? 'var(--primary)' : 'var(--border)'};border-radius:var(--radius-sm);color:${currentMode === 'frame' ? 'white' : 'var(--text-primary)'};font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:4px;">选帧</button><button class="crop-btn vf-mode-btn ${currentMode === 'segment' ? 'active' : ''}" data-mode="segment" style="flex:1;padding:8px;background:${currentMode === 'segment' ? 'var(--primary)' : 'var(--bg-secondary)'};border:1px solid ${currentMode === 'segment' ? 'var(--primary)' : 'var(--border)'};border-radius:var(--radius-sm);color:${currentMode === 'segment' ? 'white' : 'var(--text-primary)'};font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:4px;">选片段</button></div>
       <div class="crop-preview-area" style="width:100%;aspect-ratio:16/9;background:#000;border-radius:var(--radius-md);margin-bottom:12px;display:flex;align-items:center;justify-content:center;overflow:hidden;border:1px solid var(--border);"><img src="${previewSrc}" style="max-width:100%;max-height:100%;object-fit:contain;" alt="预览"></div>
       ${buildCropTimelineHTML()}</div>
     <div class="modal-footer" style="justify-content:space-between;"><span class="crop-reset-text" id="cropResetBtn" style="color:var(--text-secondary);font-size:13px;cursor:pointer;">重置修改</span><button class="modal-btn apply-btn" id="cropApplyBtn">应用</button></div></div>`;
@@ -1177,7 +1192,15 @@ function showVideoFrameModal(videoSrc, refName, replaceIndex) {
     });
   });
   const shotDur = SHOT_DATA[state.currentShot - 1]?.duration || 5;
-  const cropState = initCropDrag(modal, shotDur, true); // 传递 true 表示不修改分镜数据
+  
+  // 传递现有的片段信息以恢复状态
+  const initialState = existingRef ? {
+    rs: existingRef.segmentStart || 0,
+    re: existingRef.segmentEnd || 1,
+    pp: existingRef.framePosition || 0
+  } : null;
+  
+  const cropState = initCropDrag(modal, shotDur, true, initialState); // 传递 true 表示不修改分镜数据，传递初始状态
   // Override apply button for video frame modal
   const applyBtn = modal.querySelector('#cropApplyBtn');
   if (applyBtn) {
@@ -1198,12 +1221,19 @@ function showVideoFrameModal(videoSrc, refName, replaceIndex) {
       
       // 如果是替换模式，替换原有素材
       if (replaceIndex !== undefined && replaceIndex >= 0) {
-        state.referenceImages[replaceIndex] = { src: previewSrc, type: newType, name };
+        state.referenceImages[replaceIndex] = { 
+          src: previewSrc, 
+          type: newType, 
+          name,
+          segmentStart: rs,
+          segmentEnd: re,
+          framePosition: pp
+        };
         // 重新构建参考图堆叠区
         rebuildReferenceStack();
       } else {
         // 否则添加新素材
-        addReferenceImage(previewSrc, newType, name);
+        addReferenceImage(previewSrc, newType, name, rs, re, pp);
       }
       
       modal.remove();
@@ -1211,7 +1241,7 @@ function showVideoFrameModal(videoSrc, refName, replaceIndex) {
   }
 }
 
-function initCropDrag(modal, totalSec, skipShotUpdate) {
+function initCropDrag(modal, totalSec, skipShotUpdate, initialState) {
   totalSec = totalSec || 5;
   const track = modal.querySelector('#cropTrack'), range = modal.querySelector('#cropRange');
   const handleStart = modal.querySelector('#cropHandleStart'), handleEnd = modal.querySelector('#cropHandleEnd');
@@ -1221,7 +1251,12 @@ function initCropDrag(modal, totalSec, skipShotUpdate) {
   if (!track || !range) return { rs: 0, re: 1, pp: 0, fmtTime: s => '00:00', totalSec };
   let dragging = null, dragOffset = 0;
   const pctFromX = (x) => { const r = track.getBoundingClientRect(); return Math.max(0, Math.min(1, (x - r.left) / r.width)); };
-  let rs = 0, re = 1, pp = 0;
+  
+  // 使用初始状态或默认值
+  let rs = initialState ? initialState.rs : 0;
+  let re = initialState ? initialState.re : 1;
+  let pp = initialState ? initialState.pp : 0;
+  
   let playing = false, playRaf = null;
   function fmtTime(sec) {
     const m = Math.floor(sec / 60), s = Math.floor(sec % 60);
