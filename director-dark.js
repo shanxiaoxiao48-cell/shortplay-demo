@@ -682,7 +682,7 @@ function addGenerationResult() {
   }
 
   // 替换占位图为真实结果
-  // 1. 替换历史卡片
+  // 1. 替换历史卡片（占位卡片在最下方，真实卡片也应该在最下方）
   const historySection = document.querySelector('.history-section');
   const placeholderCard = historySection?.querySelector('.history-card.generating');
   if (placeholderCard) {
@@ -692,7 +692,7 @@ function addGenerationResult() {
     placeholderCard.replaceWith(card);
   }
   
-  // 2. 替换预览历史图框
+  // 2. 替换预览历史图框（占位图框在最上方，真实图框也在最上方）
   const previewHistory = document.querySelector('.preview-history');
   const placeholderItem = previewHistory?.querySelector('.preview-history-item.generating');
   if (placeholderItem) {
@@ -714,7 +714,7 @@ function addGenerationResult() {
 function addGeneratingPlaceholder() {
   const genType = document.getElementById('generationType')?.value === '图片生成' ? 'image' : 'video';
   
-  // 1. 添加占位历史卡片到分镜操作区（在现有卡片前面增加一个）
+  // 1. 添加占位历史卡片到分镜操作区（在最下方增加）
   const historySection = document.querySelector('.history-section');
   if (historySection) {
     const card = document.createElement('div');
@@ -728,10 +728,10 @@ function addGeneratingPlaceholder() {
       <div class="history-overlay">
         <div class="history-prompt">正在生成${genType === 'image' ? '图片' : '视频'}...</div>
       </div>`;
-    historySection.prepend(card);
+    historySection.appendChild(card); // 改为 appendChild，在最下方增加
   }
   
-  // 2. 添加占位预览历史图框（在现有小图框前面增加一个）
+  // 2. 添加占位预览历史图框（在最上方增加，保持不变）
   const previewHistory = document.querySelector('.preview-history');
   if (previewHistory) {
     const item = document.createElement('div');
@@ -748,7 +748,7 @@ function addGeneratingPlaceholder() {
     
     // 取消其他小图框的激活状态
     previewHistory.querySelectorAll('.preview-history-item').forEach(h => h.classList.remove('active'));
-    previewHistory.prepend(item);
+    previewHistory.prepend(item); // 保持 prepend，在最上方增加
   }
   
   // 3. 在视频预览框内显示占位图（覆盖在图片上方）
