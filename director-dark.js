@@ -525,6 +525,19 @@ function updatePromptPlaceholder() {
   }
 }
 
+function updatePromptMentions(oldName, newName) {
+  const promptInput = document.getElementById('promptInput');
+  if (!promptInput) return;
+  
+  // 查找所有 @ 标签
+  const atTags = promptInput.querySelectorAll('.at-tag');
+  atTags.forEach(tag => {
+    if (tag.textContent === '@' + oldName) {
+      tag.textContent = '@' + newName;
+    }
+  });
+}
+
 function handleAtMention(el) {
   const sel = window.getSelection();
   if (!sel.rangeCount) { const existing = document.querySelector('.at-mention-dropdown'); if (existing) existing.remove(); return; }
@@ -1259,6 +1272,9 @@ function showVideoFrameModal(videoSrc, refName, replaceIndex) {
       
       // 如果是替换模式，替换原有素材
       if (replaceIndex !== undefined && replaceIndex >= 0) {
+        // 保存旧名称用于更新提示词中的引用
+        const oldName = existingRef ? existingRef.name : '';
+        
         // 参考堆叠区：保存绝对时长，下次打开时作为新的基准
         const absoluteStart = rs * totalSec;
         const absoluteEnd = re * totalSec;
@@ -1275,6 +1291,12 @@ function showVideoFrameModal(videoSrc, refName, replaceIndex) {
           // 保存绝对时长用于下次打开
           absoluteDuration: absoluteDuration
         };
+        
+        // 更新提示词中的引用名称
+        if (oldName && oldName !== name) {
+          updatePromptMentions(oldName, name);
+        }
+        
         // 重新构建参考图堆叠区
         rebuildReferenceStack();
       } else {
