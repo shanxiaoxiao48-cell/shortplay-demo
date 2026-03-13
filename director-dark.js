@@ -1860,7 +1860,7 @@ function startPlayback() {
       if (i === SHOT_DATA.length - 1) x = shotEl.offsetLeft + shotEl.offsetWidth;
     }
     playhead.style.left = x + 'px';
-    state.currentTime = Math.round(timeSec);
+    state.currentTime = timeSec; // 保留小数，不要四舍五入
     updateTimeDisplay();
     syncPreviewToPlayhead();
     const cr = tc.getBoundingClientRect();
