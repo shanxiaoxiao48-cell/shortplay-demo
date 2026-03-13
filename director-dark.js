@@ -702,14 +702,19 @@ function addGenerationResult() {
     selectPreviewHistory(item, newSrc);
   }
   
-  // 3. Update preview box with the new image
+  // 3. Update preview box with the new image, remove placeholder
+  const previewBox = document.querySelector('.preview-box');
+  if (previewBox) {
+    const placeholder = previewBox.querySelector('.preview-generating-placeholder');
+    if (placeholder) placeholder.remove();
+  }
   if (shot) updatePreviewForShot(shot);
 }
 
 function addGeneratingPlaceholder() {
   const genType = document.getElementById('generationType')?.value === '图片生成' ? 'image' : 'video';
   
-  // 1. 添加占位历史卡片到分镜操作区
+  // 1. 添加占位历史卡片到分镜操作区（在现有卡片前面增加一个）
   const historySection = document.querySelector('.history-section');
   if (historySection) {
     const card = document.createElement('div');
@@ -726,11 +731,11 @@ function addGeneratingPlaceholder() {
     historySection.prepend(card);
   }
   
-  // 2. 添加占位预览历史图框
+  // 2. 添加占位预览历史图框（在现有小图框前面增加一个）
   const previewHistory = document.querySelector('.preview-history');
   if (previewHistory) {
     const item = document.createElement('div');
-    item.className = 'preview-history-item generating';
+    item.className = 'preview-history-item generating active';
     item.innerHTML = `
       <div class="generating-placeholder-small">
         <div class="generating-spinner-small"></div>
@@ -740,19 +745,15 @@ function addGeneratingPlaceholder() {
           ? '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/></svg>'
           : '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>'}
       </div>`;
+    
+    // 取消其他小图框的激活状态
+    previewHistory.querySelectorAll('.preview-history-item').forEach(h => h.classList.remove('active'));
     previewHistory.prepend(item);
-    // 设置为激活状态
-    document.querySelectorAll('.preview-history-item').forEach(h => h.classList.remove('active'));
-    item.classList.add('active');
   }
   
-  // 3. 更新预览框显示占位图
+  // 3. 在视频预览框内显示占位图（覆盖在图片上方）
   const previewBox = document.querySelector('.preview-box');
   if (previewBox) {
-    const img = previewBox.querySelector('img');
-    if (img) {
-      img.style.display = 'none';
-    }
     let placeholder = previewBox.querySelector('.preview-generating-placeholder');
     if (!placeholder) {
       placeholder = document.createElement('div');
