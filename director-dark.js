@@ -333,7 +333,7 @@ function initReferenceUpload() {
   });
 }
 
-function addReferenceImage(imageSrc, type, name, segmentStart, segmentEnd, framePosition) {
+function addReferenceImage(imageSrc, type, name, segmentStart, segmentEnd, framePosition, absoluteDuration) {
   type = type || 'image';
   if (!name) {
     // Auto-generate name based on current shot and type
@@ -380,13 +380,22 @@ function addReferenceImage(imageSrc, type, name, segmentStart, segmentEnd, frame
   });
   const refAddBox = document.getElementById('refAddBox');
   referenceStack.insertBefore(imageItem, refAddBox);
+  
+  // 计算绝对时长
+  if (!absoluteDuration && segmentStart !== undefined && segmentEnd !== undefined) {
+    const shot = SHOT_DATA[state.currentShot - 1];
+    const shotDur = shot?.originalDuration || shot?.duration || 5;
+    absoluteDuration = (segmentEnd - segmentStart) * shotDur;
+  }
+  
   state.referenceImages.push({ 
     src: imageSrc, 
     type, 
     name,
     segmentStart: segmentStart || 0,
     segmentEnd: segmentEnd || 1,
-    framePosition: framePosition || 0
+    framePosition: framePosition || 0,
+    absoluteDuration: absoluteDuration
   });
   referenceStack.classList.add('has-images');
   repositionRefAddBtn();
@@ -1203,15 +1212,30 @@ function showVideoFrameModal(videoSrc, refName, replaceIndex) {
     });
   });
   const shot = SHOT_DATA[state.currentShot - 1];
-  // 使用原始时长，如果没有则使用当前时长
-  const shotDur = shot?.originalDuration || shot?.duration || 5;
+  // 如果是从参考堆叠区打开（replaceIndex存在），使用素材自己保存的时长
+  // 否则使用分镜的原始时长
+  let shotDur;
+  let initialState = null;
   
-  // 传递现有的片段信息以恢复状态
-  const initialState = existingRef ? {
-    rs: existingRef.segmentStart || 0,
-    re: existingRef.segmentEnd || 1,
-    pp: existingRef.segmentStart || 0  // 播放头初始位置在范围框起始位置
-  } : null;
+  if (replaceIndex !== undefined && replaceIndex >= 0 && existingRef) {
+    // 参考堆叠区的素材：使用素材自己的绝对时长
+    shotDur = existingRef.absoluteDuration || (shot?.originalDuration || shot?.duration || 5);
+    // 初始状态：整个时间轴（因为已经是剪裁后的结果）
+    initialState = {
+      rs: 0,
+      re: 1,
+      pp: 0
+    };
+  } else {
+    // 从其他地方打开：使用分镜的原始时长
+    shotDur = shot?.originalDuration || shot?.duration || 5;
+    // 恢复之前的状态
+    initialState = existingRef ? {
+      rs: existingRef.segmentStart || 0,
+      re: existingRef.segmentEnd || 1,
+      pp: existingRef.segmentStart || 0
+    } : null;
+  }
   
   const cropState = initCropDrag(modal, shotDur, true, initialState); // 传递 true 表示不修改分镜数据，传递初始状态
   // Override apply button for video frame modal
@@ -1235,19 +1259,30 @@ function showVideoFrameModal(videoSrc, refName, replaceIndex) {
       
       // 如果是替换模式，替换原有素材
       if (replaceIndex !== undefined && replaceIndex >= 0) {
+        // 参考堆叠区：保存绝对时长，下次打开时作为新的基准
+        const absoluteStart = rs * totalSec;
+        const absoluteEnd = re * totalSec;
+        const absoluteDuration = absoluteEnd - absoluteStart;
+        
         state.referenceImages[replaceIndex] = { 
           src: previewSrc, 
           type: newType, 
           name,
-          segmentStart: rs,
-          segmentEnd: re,
-          framePosition: pp
+          // 保存为0-1的比例，但基于新的时长
+          segmentStart: 0,
+          segmentEnd: 1,
+          framePosition: 0,
+          // 保存绝对时长用于下次打开
+          absoluteDuration: absoluteDuration
         };
         // 重新构建参考图堆叠区
         rebuildReferenceStack();
       } else {
         // 否则添加新素材
-        addReferenceImage(previewSrc, newType, name, rs, re, pp);
+        const absoluteStart = rs * totalSec;
+        const absoluteEnd = re * totalSec;
+        const absoluteDuration = absoluteEnd - absoluteStart;
+        addReferenceImage(previewSrc, newType, name, rs, re, pp, absoluteDuration);
       }
       
       modal.remove();
