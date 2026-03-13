@@ -716,6 +716,41 @@ function addGenerationResult() {
     if (placeholder) placeholder.remove();
   }
   if (shot) updatePreviewForShot(shot);
+  
+  // 4. 添加到右侧素材库的历史标签页
+  addToAssetHistory(newSrc, genType);
+}
+
+function addToAssetHistory(src, type) {
+  // 找到历史标签页的asset-grid
+  const historyContent = document.querySelector('.asset-tab-content[data-content="history"]');
+  if (!historyContent) return;
+  
+  const assetGrid = historyContent.querySelector('.asset-grid');
+  if (!assetGrid) return;
+  
+  // 创建新的asset-item
+  const item = document.createElement('div');
+  item.className = 'asset-item';
+  item.setAttribute('data-asset-src', src);
+  item.innerHTML = `
+    <img src="${src.replace('300&h=400', '200&h=200')}" alt="历史素材">
+    <div class="asset-item-actions">
+      <button class="asset-ref-btn">引用</button>
+    </div>`;
+  
+  // 添加到最前面
+  assetGrid.insertBefore(item, assetGrid.firstChild);
+  
+  // 绑定引用按钮事件
+  const refBtn = item.querySelector('.asset-ref-btn');
+  if (refBtn) {
+    refBtn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      const itemSrc = item.getAttribute('data-asset-src') || item.querySelector('img').src;
+      if (itemSrc) { addReferenceImage(itemSrc, type); }
+    });
+  }
 }
 
 function addGeneratingPlaceholder() {
@@ -774,6 +809,47 @@ function addGeneratingPlaceholder() {
         <div class="generating-spinner-large"></div>
         <div class="generating-text-large">生成中...</div>`;
       previewBox.appendChild(placeholder);
+    }
+    placeholder.style.display = 'flex';
+  }
+}
+
+function addGeneratingPlaceholderForErase() {
+  const genType = 'video'; // 字幕擦除默认是视频
+  
+  // 1. 不在分镜操作区添加占位卡片
+  
+  // 2. 添加占位预览历史图框（在最上方增加）
+  const previewHistory = document.querySelector('.preview-history');
+  if (previewHistory) {
+    const item = document.createElement('div');
+    item.className = 'preview-history-item generating active';
+    item.innerHTML = `
+      <div class="generating-placeholder-small">
+        <div class="generating-spinner-small"></div>
+      </div>
+      <div class="history-type-icon ${genType}">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+      </div>`;
+    
+    // 取消其他小图框的激活状态
+    previewHistory.querySelectorAll('.preview-history-item').forEach(h => h.classList.remove('active'));
+    previewHistory.prepend(item);
+  }
+  
+  // 3. 在视频预览框内显示占位图
+  const previewBox = document.querySelector('.preview-box');
+  if (previewBox) {
+    let placeholder = previewBox.querySelector('.preview-generating-placeholder');
+    if (!placeholder) {
+      placeholder = document.createElement('div');
+      placeholder.className = 'preview-generating-placeholder';
+      placeholder.innerHTML = `
+        <div class="generating-spinner-large"></div>
+        <div class="generating-text-large">擦除中...</div>`;
+      previewBox.appendChild(placeholder);
+    } else {
+      placeholder.querySelector('.generating-text-large').textContent = '擦除中...';
     }
     placeholder.style.display = 'flex';
   }
@@ -1215,6 +1291,8 @@ function initPreviewActions() {
   const videoCropBtn = document.getElementById('videoCropBtn');
   if (subtitleEraseBtn) {
     subtitleEraseBtn.addEventListener('click', () => {
+      // 字幕擦除：只在预览框和小图框显示占位，不在左侧分镜操作区显示
+      addGeneratingPlaceholderForErase();
       setTimeout(() => { addGenerationResult(); }, 2000);
     });
   }
