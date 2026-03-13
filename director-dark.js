@@ -690,6 +690,13 @@ function addGenerationResult() {
     const genType = document.getElementById('generationType')?.value === '图片生成' ? 'image' : 'video';
     const card = createHistoryCard(newSrc, promptText, genType);
     placeholderCard.replaceWith(card);
+    
+    // 确保滚动到最下方显示新卡片
+    setTimeout(() => {
+      if (historySection) {
+        historySection.scrollTop = historySection.scrollHeight;
+      }
+    }, 0);
   }
   
   // 2. 替换预览历史图框（占位图框在最上方，真实图框也在最上方）
@@ -729,6 +736,11 @@ function addGeneratingPlaceholder() {
         <div class="history-prompt">正在生成${genType === 'image' ? '图片' : '视频'}...</div>
       </div>`;
     historySection.appendChild(card); // 改为 appendChild，在最下方增加
+    
+    // 自动滚动到最下方
+    setTimeout(() => {
+      historySection.scrollTop = historySection.scrollHeight;
+    }, 0);
   }
   
   // 2. 添加占位预览历史图框（在最上方增加，保持不变）
