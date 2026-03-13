@@ -320,6 +320,7 @@ body {
   width: 100%; max-width: 420px; aspect-ratio: 1/1; background: var(--bg-secondary);
   border-radius: var(--radius-lg); border: 1px solid var(--border); overflow: hidden;
   display: flex; align-items: center; justify-content: center; box-shadow: var(--shadow-md);
+  position: relative; /* 添加相对定位，使占位图相对于预览框定位 */
 }
 .preview-box img { height: 100%; width: auto; aspect-ratio: 9/16; object-fit: cover; }
 
