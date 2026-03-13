@@ -1702,6 +1702,61 @@ function initTimelineShots() {
       }
     });
   });
+  initTimelineDragSort();
+}
+
+// ========== 时间轴拖拽排序 ==========
+function initTimelineDragSort() {
+  const shots = document.querySelectorAll('.timeline-shot');
+  let draggedElement = null;
+  let draggedIndex = -1;
+
+  shots.forEach((shot, index) => {
+    shot.setAttribute('draggable', 'true');
+    shot.style.cursor = 'move';
+
+    shot.addEventListener('dragstart', function(e) {
+      draggedElement = this;
+      draggedIndex = index;
+      this.style.opacity = '0.5';
+      e.dataTransfer.effectAllowed = 'move';
+    });
+
+    shot.addEventListener('dragend', function(e) {
+      this.style.opacity = '';
+      shots.forEach(s => s.classList.remove('drag-over'));
+    });
+
+    shot.addEventListener('dragover', function(e) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      if (this !== draggedElement) {
+        this.classList.add('drag-over');
+      }
+    });
+
+    shot.addEventListener('dragleave', function(e) {
+      this.classList.remove('drag-over');
+    });
+
+    shot.addEventListener('drop', function(e) {
+      e.preventDefault();
+      this.classList.remove('drag-over');
+      
+      if (this !== draggedElement) {
+        const dropIndex = Array.from(shots).indexOf(this);
+        // Reorder SHOT_DATA
+        const [movedShot] = SHOT_DATA.splice(draggedIndex, 1);
+        SHOT_DATA.splice(dropIndex, 0, movedShot);
+        renumberShots();
+        // Rebuild timeline
+        buildTimelineShots();
+        initPlayhead();
+        // Keep the moved shot selected
+        selectShot(dropIndex);
+      }
+    });
+  });
 }
 
 // ========== 故事板切换 ==========
@@ -1906,6 +1961,64 @@ function initStoryboardInteractions() {
         const tc = document.getElementById('timelineContent');
         if (tc) { tc.innerHTML = createStoryboardView(); initStoryboardInteractions(); }
       });
+    });
+  });
+  initStoryboardDragSort();
+}
+
+// ========== 故事板拖拽排序 ==========
+function initStoryboardDragSort() {
+  const cards = document.querySelectorAll('.storyboard-card');
+  let draggedElement = null;
+  let draggedIndex = -1;
+
+  cards.forEach((card, index) => {
+    card.setAttribute('draggable', 'true');
+    card.style.cursor = 'move';
+
+    card.addEventListener('dragstart', function(e) {
+      draggedElement = this;
+      draggedIndex = index;
+      this.style.opacity = '0.5';
+      e.dataTransfer.effectAllowed = 'move';
+    });
+
+    card.addEventListener('dragend', function(e) {
+      this.style.opacity = '';
+      cards.forEach(c => c.classList.remove('drag-over'));
+    });
+
+    card.addEventListener('dragover', function(e) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      if (this !== draggedElement) {
+        this.classList.add('drag-over');
+      }
+    });
+
+    card.addEventListener('dragleave', function(e) {
+      this.classList.remove('drag-over');
+    });
+
+    card.addEventListener('drop', function(e) {
+      e.preventDefault();
+      this.classList.remove('drag-over');
+      
+      if (this !== draggedElement) {
+        const dropIndex = Array.from(cards).indexOf(this);
+        // Reorder SHOT_DATA
+        const [movedShot] = SHOT_DATA.splice(draggedIndex, 1);
+        SHOT_DATA.splice(dropIndex, 0, movedShot);
+        renumberShots();
+        // Rebuild storyboard
+        const tc = document.getElementById('timelineContent');
+        if (tc) { 
+          tc.innerHTML = createStoryboardView(); 
+          initStoryboardInteractions(); 
+        }
+        // Keep the moved shot selected
+        selectShot(dropIndex);
+      }
     });
   });
 }

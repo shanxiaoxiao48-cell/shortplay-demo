@@ -654,3 +654,24 @@ body {
 @media (max-width: 1400px) { :root { --left-panel-pct: 28%; } .right-panel { width: 220px; } .preview-main { max-width: 380px; } }
 @media (max-width: 1200px) { :root { --left-panel-pct: 30%; } .right-panel { width: 200px; } .preview-main { max-width: 340px; } }
 @media (min-width: 1920px) { .right-panel { width: 280px; } .preview-main { max-width: 520px; } }
+
+/* ========== 拖拽排序样式 ========== */
+.timeline-shot.drag-over {
+  border-color: var(--primary);
+  box-shadow: 0 0 20px var(--primary-glow);
+  transform: scale(1.05);
+}
+
+.storyboard-card.drag-over {
+  border-color: var(--primary);
+  box-shadow: 0 0 20px var(--primary-glow);
+  transform: scale(1.05);
+}
+
+.timeline-shot[draggable="true"]:hover {
+  cursor: move;
+}
+
+.storyboard-card[draggable="true"]:hover {
+  cursor: move;
+}
