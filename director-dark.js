@@ -629,11 +629,18 @@ function handleGenerate() {
   const originalHTML = btn.innerHTML;
   btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin 1s linear infinite;"><circle cx="12" cy="12" r="10" stroke-dasharray="60" stroke-dashoffset="30"/></svg> 生成中...`;
   btn.disabled = true; btn.style.opacity = '0.7';
+  
+  // 立即添加占位图
+  addGeneratingPlaceholder();
+  
   setTimeout(() => {
     btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg> 成功`;
     btn.style.background = '#52c41a';
     showToast(`${type}成功！`);
+    
+    // 生成完成，替换占位图为真实结果
     addGenerationResult();
+    
     // Clear prompt input after successful generation
     const promptInput = document.getElementById('promptInput');
     if (promptInput) promptInput.textContent = '';
@@ -674,24 +681,89 @@ function addGenerationResult() {
     }
   }
 
-  // 1. 添加历史卡片到分镜操作区
+  // 替换占位图为真实结果
+  // 1. 替换历史卡片
   const historySection = document.querySelector('.history-section');
-  if (historySection) {
+  const placeholderCard = historySection?.querySelector('.history-card.generating');
+  if (placeholderCard) {
     const promptText = document.getElementById('promptInput')?.textContent?.substring(0, 80) || '';
     const genType = document.getElementById('generationType')?.value === '图片生成' ? 'image' : 'video';
     const card = createHistoryCard(newSrc, promptText, genType);
-    historySection.prepend(card);
+    placeholderCard.replaceWith(card);
   }
-  // 2. 添加预览历史图框
+  
+  // 2. 替换预览历史图框
   const previewHistory = document.querySelector('.preview-history');
-  if (previewHistory) {
+  const placeholderItem = previewHistory?.querySelector('.preview-history-item.generating');
+  if (placeholderItem) {
     const genType = document.getElementById('generationType')?.value === '图片生成' ? 'image' : 'video';
     const item = createPreviewHistoryItem(newSrc, genType);
-    previewHistory.prepend(item);
+    placeholderItem.replaceWith(item);
     selectPreviewHistory(item, newSrc);
   }
+  
   // 3. Update preview box with the new image
   if (shot) updatePreviewForShot(shot);
+}
+
+function addGeneratingPlaceholder() {
+  const genType = document.getElementById('generationType')?.value === '图片生成' ? 'image' : 'video';
+  
+  // 1. 添加占位历史卡片到分镜操作区
+  const historySection = document.querySelector('.history-section');
+  if (historySection) {
+    const card = document.createElement('div');
+    card.className = 'history-card generating';
+    card.style.marginTop = '8px';
+    card.innerHTML = `
+      <div class="history-card-inner generating-placeholder">
+        <div class="generating-spinner"></div>
+        <div class="generating-text">生成中...</div>
+      </div>
+      <div class="history-overlay">
+        <div class="history-prompt">正在生成${genType === 'image' ? '图片' : '视频'}...</div>
+      </div>`;
+    historySection.prepend(card);
+  }
+  
+  // 2. 添加占位预览历史图框
+  const previewHistory = document.querySelector('.preview-history');
+  if (previewHistory) {
+    const item = document.createElement('div');
+    item.className = 'preview-history-item generating';
+    item.innerHTML = `
+      <div class="generating-placeholder-small">
+        <div class="generating-spinner-small"></div>
+      </div>
+      <div class="history-type-icon ${genType}">
+        ${genType === 'image' 
+          ? '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/></svg>'
+          : '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>'}
+      </div>`;
+    previewHistory.prepend(item);
+    // 设置为激活状态
+    document.querySelectorAll('.preview-history-item').forEach(h => h.classList.remove('active'));
+    item.classList.add('active');
+  }
+  
+  // 3. 更新预览框显示占位图
+  const previewBox = document.querySelector('.preview-box');
+  if (previewBox) {
+    const img = previewBox.querySelector('img');
+    if (img) {
+      img.style.display = 'none';
+    }
+    let placeholder = previewBox.querySelector('.preview-generating-placeholder');
+    if (!placeholder) {
+      placeholder = document.createElement('div');
+      placeholder.className = 'preview-generating-placeholder';
+      placeholder.innerHTML = `
+        <div class="generating-spinner-large"></div>
+        <div class="generating-text-large">生成中...</div>`;
+      previewBox.appendChild(placeholder);
+    }
+    placeholder.style.display = 'flex';
+  }
 }
 
 function selectPreviewHistory(item, src) {
